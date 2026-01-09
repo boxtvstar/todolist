@@ -1,6 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Project, ProjectStatus, Category } from '../types';
+import CustomDatePicker from './CustomDatePicker';
 
 interface ProjectsViewProps {
   projects: Project[];
@@ -265,11 +266,9 @@ const ProjectsView: React.FC<ProjectsViewProps> = (props) => {
                 </div>
                 <div className="space-y-3">
                   <label className="text-[10px] font-black text-[#4ade80] uppercase tracking-widest ml-1">목표 마감일</label>
-                  <input
-                    type="date"
-                    className="w-full bg-[#0d1310] border border-white/10 rounded-2xl px-6 py-4 outline-none focus:border-[#4ade80]/50 text-white transition-all font-bold"
+                  <CustomDatePicker
                     value={formData.deadline}
-                    onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
+                    onChange={(val) => setFormData({ ...formData, deadline: val })}
                   />
                 </div>
               </div>

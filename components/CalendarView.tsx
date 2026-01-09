@@ -24,7 +24,10 @@ const CalendarView: React.FC<CalendarViewProps> = ({ tasks, categories, toggleTa
     for (let i = 0; i < firstDay; i++) days.push({ day: 0, dateStr: '' });
     for (let i = 1; i <= daysInMonth; i++) {
       const d = new Date(year, month, i);
-      days.push({ day: i, dateStr: d.toISOString().split('T')[0] });
+      const yearStr = d.getFullYear();
+      const monthStr = String(d.getMonth() + 1).padStart(2, '0');
+      const dayStr = String(d.getDate()).padStart(2, '0');
+      days.push({ day: i, dateStr: `${yearStr}-${monthStr}-${dayStr}` });
     }
     return days;
   }, [currentDate]);
@@ -67,7 +70,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ tasks, categories, toggleTa
 
         <div className="grid grid-cols-7 gap-2 h-full content-start">
           {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map((d, i) => (
-            <div key={d} className={`text-center text-[9px] font-black uppercase tracking-[0.25em] mb-2 ${i === 0 ? 'text-red-900/50' : 'text-gray-600'}`}>{d}</div>
+            <div key={d} className={`text-center text-[9px] font-black uppercase tracking-[0.25em] mb-2 ${i === 0 ? 'text-red-500' : 'text-gray-600'}`}>{d}</div>
           ))}
           {monthData.map((dayObj, idx) => {
             if (dayObj.day === 0) return <div key={`empty-${idx}`} />;
@@ -75,6 +78,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ tasks, categories, toggleTa
             const dayTasks = tasks.filter(t => t.dueDate === dayObj.dateStr);
             const isSelected = selectedDateStr === dayObj.dateStr;
             const isToday = new Date().toISOString().split('T')[0] === dayObj.dateStr;
+            const isSunday = new Date(dayObj.dateStr).getDay() === 0;
 
             return (
               <button
@@ -85,7 +89,11 @@ const CalendarView: React.FC<CalendarViewProps> = ({ tasks, categories, toggleTa
                   : 'bg-black/20 border-white/5 hover:border-[#4ade80]/30'
                   }`}
               >
-                <span className={`text-[10px] font-black ${isToday ? 'bg-[#4ade80] text-[#0f1712] px-2 py-0.5 rounded-md shadow-lg' : 'text-gray-500 group-hover:text-gray-300'}`}>
+                <span className={`text-[10px] font-black ${isToday
+                  ? 'bg-[#4ade80] text-[#0f1712] px-2 py-0.5 rounded-md shadow-lg'
+                  : isSunday
+                    ? 'text-red-500 group-hover:text-red-400'
+                    : 'text-gray-500 group-hover:text-gray-300'}`}>
                   {dayObj.day}
                 </span>
                 <div className="w-full space-y-1 mt-1">

@@ -158,6 +158,9 @@ const ProjectsView: React.FC<ProjectsViewProps> = (props) => {
                     <h3 className="text-lg font-black text-white group-hover:text-[#4ade80] transition-colors">{project.name}</h3>
                     <div className="flex items-center gap-2">
                       <span className="px-1.5 py-0.5 rounded-md bg-white/5 text-[9px] font-black text-gray-400 uppercase tracking-widest">{category?.name || 'Category'}</span>
+                      <span className="text-[9px] font-bold text-gray-500">
+                        {new Date(project.createdAt).toLocaleDateString('ko-KR', { year: '2-digit', month: '2-digit', day: '2-digit' })} 시작
+                      </span>
                       <span className={`text-[9px] font-bold flex items-center gap-1 ${isUrgent ? 'text-red-400' : 'text-gray-600'}`}>
                         <span className={`w-1 h-1 rounded-full ${isUrgent ? 'bg-red-500' : 'bg-gray-700'}`} />
                         {daysLeft < 0 ? `D+${Math.abs(daysLeft)}` : `D-${daysLeft}`}일 남음

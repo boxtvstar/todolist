@@ -77,7 +77,9 @@ const CalendarView: React.FC<CalendarViewProps> = ({ tasks, categories, toggleTa
 
             const dayTasks = tasks.filter(t => t.dueDate === dayObj.dateStr);
             const isSelected = selectedDateStr === dayObj.dateStr;
-            const isToday = new Date().toISOString().split('T')[0] === dayObj.dateStr;
+            const today = new Date();
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            const isToday = todayStr === dayObj.dateStr;
             const isSunday = new Date(dayObj.dateStr).getDay() === 0;
 
             return (

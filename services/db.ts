@@ -10,8 +10,9 @@ import {
     setDoc,
     getDoc
 } from "firebase/firestore";
-import { db } from "./firebase";
-import { Task, Project, Category } from "../types";
+import { db, storage } from "./firebase";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { Task, Project, Category, Memo } from "../types";
 
 // Collections
 const TASKS_COLLECTION = "tasks";
@@ -88,7 +89,7 @@ export const deleteCategoryFromDb = async (categoryId: string) => {
 // Memos
 const MEMOS_COLLECTION = "memos";
 
-import { Memo } from "../types";
+
 
 export const addMemoToDb = async (userId: string, memo: Memo) => {
     const { id, ...memoData } = memo;
@@ -105,4 +106,11 @@ export const updateMemoInDb = async (memoId: string, updates: Partial<Memo>) => 
 
 export const deleteMemoFromDb = async (memoId: string) => {
     await deleteDoc(doc(db, MEMOS_COLLECTION, memoId));
+};
+
+export const uploadMemoImage = async (userId: string, file: File): Promise<string> => {
+    const timestamp = Date.now();
+    const storageRef = ref(storage, `memos/${userId}/${timestamp}_${file.name}`);
+    const snapshot = await uploadBytes(storageRef, file);
+    return await getDownloadURL(snapshot.ref);
 };

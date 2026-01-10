@@ -176,7 +176,7 @@ const MemoView: React.FC<MemoViewProps> = ({ memos, addMemo, updateMemo, deleteM
 
                         <div className="flex-1 p-8 pt-0">
                             <textarea
-                                className="w-full h-full bg-transparent text-lg font-medium text-gray-300 outline-none resize-none leading-relaxed placeholder:text-gray-700 custom-scrollbar whitespace-pre-wrap"
+                                className="w-full h-full bg-transparent text-sm font-medium text-gray-300 outline-none resize-none leading-relaxed placeholder:text-gray-700 custom-scrollbar whitespace-pre-wrap"
                                 placeholder="내용을 입력하세요..."
                                 value={localContent}
                                 onChange={handleContentChange}

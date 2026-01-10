@@ -165,7 +165,7 @@ const App: React.FC = () => {
         const newCompleted = !task.completed;
         await updateTaskInDb(id, {
           completed: newCompleted,
-          completedAt: newCompleted ? new Date().toISOString() : deleteField()
+          completedAt: (newCompleted ? new Date().toISOString() : deleteField()) as any
         });
       } catch (error: any) {
         console.error("Task update failed:", error);

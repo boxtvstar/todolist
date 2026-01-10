@@ -32,7 +32,26 @@ const Dashboard: React.FC<DashboardProps> = ({
   }, [tasks, selectedProjectId, today]);
 
   const activeTasks = filteredTasks.filter(t => !t.completed);
-  const completedTasks = filteredTasks.filter(t => t.completed);
+
+  const completedTasks = useMemo(() => {
+    return filteredTasks.filter(t => {
+      if (!t.completed) return false;
+
+      // If viewing a specific project, show all completed tasks for that project
+      if (selectedProjectId) return true;
+
+      // In "Today's Focus" default view, ONLY show tasks completed TODAY
+      if (!t.completedAt) return false; // Hide legacy tasks without timestamp
+
+      const cDate = new Date(t.completedAt); // Parse UTC ISO
+      const now = new Date(); // Local now
+
+      // Compare in local time
+      return cDate.getFullYear() === now.getFullYear() &&
+        cDate.getMonth() === now.getMonth() &&
+        cDate.getDate() === now.getDate();
+    });
+  }, [filteredTasks, selectedProjectId]);
 
   const completionRate = useMemo(() => {
     if (filteredTasks.length === 0) return 0;

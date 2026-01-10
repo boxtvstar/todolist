@@ -23,6 +23,7 @@ export interface Task {
   projectId?: string;
   subSteps?: string[];
   createdAt: string;
+  completedAt?: string;
 }
 
 export interface Category {

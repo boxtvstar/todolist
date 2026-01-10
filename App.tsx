@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, deleteField } from 'firebase/firestore';
 import { View, Task, Category, Project, ProjectStatus, Memo } from './types';
 import { INITIAL_CATEGORIES, INITIAL_PROJECTS } from './constants';
 import Sidebar from './components/Sidebar';
@@ -162,7 +162,11 @@ const App: React.FC = () => {
     const task = tasks.find(t => t.id === id);
     if (task) {
       try {
-        await updateTaskInDb(id, { completed: !task.completed });
+        const newCompleted = !task.completed;
+        await updateTaskInDb(id, {
+          completed: newCompleted,
+          completedAt: newCompleted ? new Date().toISOString() : deleteField()
+        });
       } catch (error: any) {
         console.error("Task update failed:", error);
         alert(`상태 업데이트 실패: ${error.message}`);

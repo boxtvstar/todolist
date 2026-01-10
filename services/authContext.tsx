@@ -5,7 +5,9 @@ import {
     getRedirectResult,
     signOut,
     onAuthStateChanged,
-    User
+    User,
+    setPersistence,
+    browserLocalPersistence
 } from 'firebase/auth';
 import { auth } from './firebase';
 
@@ -29,23 +31,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Handle redirect result
-        getRedirectResult(auth).then(() => {
-            // Processing handled by onAuthStateChanged
-        }).catch((error) => {
-            console.error("Redirect login failed:", error);
-        });
+        const initAuth = async () => {
+            try {
+                // Ensure persistence is set to LOCAL (survives browser restarts)
+                await setPersistence(auth, browserLocalPersistence);
+
+                // Check if we are returning from a redirect login
+                await getRedirectResult(auth);
+            } catch (error) {
+                console.error("Auth initialization failed:", error);
+            }
+        };
 
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
             setUser(currentUser);
             setLoading(false);
         });
+
+        initAuth();
+
         return () => unsubscribe();
     }, []);
 
     const login = async () => {
         const provider = new GoogleAuthProvider();
         try {
+            await setPersistence(auth, browserLocalPersistence);
             await signInWithRedirect(auth, provider);
         } catch (error) {
             console.error("Login redirect failed:", error);
@@ -64,7 +75,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         <AuthContext.Provider value={{ user, loading, login, logout }}>
             {loading ? (
                 <div className="flex h-screen w-full items-center justify-center bg-[#0f1712] text-[#4ade80]">
-                    <div className="text-xl font-bold animate-pulse">Emerald System Initializing...</div>
+                    <div className="flex flex-col items-center gap-4">
+                        <div className="text-xl font-bold animate-pulse">Emerald System Initializing...</div>
+                        <div className="text-xs text-gray-500">인증 상태를 확인하고 있습니다...</div>
+                    </div>
                 </div>
             ) : (
                 children

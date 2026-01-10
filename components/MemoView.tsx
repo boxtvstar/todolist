@@ -105,8 +105,12 @@ const MemoView: React.FC<MemoViewProps> = ({ memos, addMemo, updateMemo, deleteM
 
     return (
         <div className="flex h-full gap-6 fade-in py-2">
-            {/* Sidebar List */}
-            <div className="w-80 bg-[#1c2621]/40 border border-white/5 rounded-[2rem] flex flex-col overflow-hidden shadow-2xl shrink-0">
+            {/* Sidebar List - Hidden on mobile if memo selected */}
+            <div className={`
+                bg-[#1c2621]/40 border border-white/5 rounded-[2rem] flex-col overflow-hidden shadow-2xl shrink-0
+                ${selectedMemoId ? 'hidden md:flex' : 'flex'}
+                w-full md:w-80
+            `}>
                 <div className="p-5 border-b border-white/5 bg-[#1c2621]/60">
                     <div className="flex items-center justify-between mb-4">
                         <h2 className="text-xl font-black text-white">메모장</h2>
@@ -158,13 +162,26 @@ const MemoView: React.FC<MemoViewProps> = ({ memos, addMemo, updateMemo, deleteM
                 </div>
             </div>
 
-            {/* Editor Main */}
-            <div className="flex-1 bg-[#1c2621]/40 border border-white/5 rounded-[2rem] shadow-2xl overflow-hidden flex flex-col relative">
+            {/* Editor Main - Hidden on mobile if NO memo selected */}
+            <div className={`
+                bg-[#1c2621]/40 border border-white/5 rounded-[2rem] shadow-2xl overflow-hidden flex-col relative
+                ${!selectedMemoId ? 'hidden md:flex' : 'flex'}
+                flex-1
+            `}>
                 {selectedMemo ? (
                     <>
                         <div className="p-8 pb-4">
                             <div className="flex items-center justify-between mb-4 opacity-50">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-[#4ade80]">Last Edited: {new Date(selectedMemo.updatedAt).toLocaleString('ko-KR')}</span>
+                                <div className="flex items-center gap-4">
+                                    {/* Mobile Back Button */}
+                                    <button
+                                        onClick={() => setSelectedMemoId(null)}
+                                        className="md:hidden text-white font-bold text-lg"
+                                    >
+                                        ←
+                                    </button>
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-[#4ade80]">Last Edited: {new Date(selectedMemo.updatedAt).toLocaleString('ko-KR')}</span>
+                                </div>
                                 <button
                                     onClick={() => setDeleteId(selectedMemo.id)}
                                     className="p-2 hover:bg-red-500/10 text-gray-500 hover:text-red-500 rounded-lg transition-colors"

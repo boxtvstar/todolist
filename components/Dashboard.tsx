@@ -100,7 +100,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-[#4ade80]/10 border border-[#4ade80]/20 text-[10px] font-black text-[#4ade80] uppercase tracking-widest">
               Today's Focus
             </div>
-            <h2 className="text-3xl lg:text-4xl font-black text-white tracking-tight leading-tight whitespace-nowrap">
+            <h2 className="text-2xl md:text-3xl lg:text-4xl font-black text-white tracking-tight leading-tight whitespace-normal md:whitespace-nowrap">
               {selectedProjectId ? '프로젝트를' : '오늘의 과업을'} <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#4ade80] to-[#a7f3d0]">성공적으로 완료</span>하세요.
             </h2>
             <p className="text-gray-400 font-medium text-base">
@@ -122,31 +122,34 @@ const Dashboard: React.FC<DashboardProps> = ({
               </button>
 
               {showNotifications && (
-                <div className="absolute top-full right-0 mt-4 w-72 bg-[#1c2621] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50">
-                  <div className="p-4 border-b border-white/5 flex justify-between items-center">
-                    <h4 className="font-bold text-white text-sm">알림 센터</h4>
-                    <span className="text-xs text-[#4ade80] font-bold">{activeAlerts.length} Active</span>
+                <>
+                  <div className="fixed inset-0 bg-black/60 z-40 md:hidden" onClick={() => setShowNotifications(false)} />
+                  <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[85vw] max-w-[320px] bg-[#1c2621] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50 md:absolute md:top-full md:right-0 md:left-auto md:translate-x-0 md:translate-y-0 md:mt-4 md:w-72">
+                    <div className="p-4 border-b border-white/5 flex justify-between items-center">
+                      <h4 className="font-bold text-white text-sm">알림 센터</h4>
+                      <span className="text-xs text-[#4ade80] font-bold">{activeAlerts.length} Active</span>
+                    </div>
+                    <div className="max-h-60 overflow-y-auto">
+                      {activeAlerts.length === 0 ? (
+                        <p className="p-4 text-center text-xs text-gray-500">새로운 알림이 없습니다.</p>
+                      ) : (
+                        activeAlerts.map(alert => (
+                          <button
+                            key={alert.id}
+                            onClick={() => { onNavigate(View.REMINDER); setShowNotifications(false); }}
+                            className="w-full text-left p-4 hover:bg-white/5 border-b border-white/5 last:border-0 transition-all group"
+                          >
+                            <p className="text-white text-xs font-bold mb-1 group-hover:text-[#facc15]">{alert.title}</p>
+                            <div className="flex justify-between items-center">
+                              <p className="text-[10px] text-gray-400">목표일: {alert.date}</p>
+                              <span className="text-[10px] text-[#facc15] bg-[#facc15]/10 px-2 rounded">D-{Math.ceil((new Date(alert.date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))}</span>
+                            </div>
+                          </button>
+                        ))
+                      )}
+                    </div>
                   </div>
-                  <div className="max-h-60 overflow-y-auto">
-                    {activeAlerts.length === 0 ? (
-                      <p className="p-4 text-center text-xs text-gray-500">새로운 알림이 없습니다.</p>
-                    ) : (
-                      activeAlerts.map(alert => (
-                        <button
-                          key={alert.id}
-                          onClick={() => onNavigate(View.REMINDER)}
-                          className="w-full text-left p-4 hover:bg-white/5 border-b border-white/5 last:border-0 transition-all group"
-                        >
-                          <p className="text-white text-xs font-bold mb-1 group-hover:text-[#facc15]">{alert.title}</p>
-                          <div className="flex justify-between items-center">
-                            <p className="text-[10px] text-gray-400">목표일: {alert.date}</p>
-                            <span className="text-[10px] text-[#facc15] bg-[#facc15]/10 px-2 rounded">D-{Math.ceil((new Date(alert.date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))}</span>
-                          </div>
-                        </button>
-                      ))
-                    )}
-                  </div>
-                </div>
+                </>
               )}
             </div>
 
@@ -180,7 +183,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           <input
             type="text"
             placeholder={selectedProjectId ? "프로젝트의 세부 과업을 입력하세요..." : "오늘 정복할 새로운 목표를 입력하세요..."}
-            className="w-full bg-transparent px-6 py-4 outline-none text-lg text-white placeholder:text-gray-600 font-semibold"
+            className="w-full bg-transparent pl-6 pr-32 py-4 outline-none text-base md:text-lg text-white placeholder:text-gray-600 font-semibold"
             value={newTaskTitle}
             onChange={(e) => setNewTaskTitle(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleAdd()}

@@ -416,7 +416,7 @@ const App: React.FC = () => {
       </div>
 
       <main className="w-full md:w-[70%] flex flex-col min-w-0 bg-[#1c2621]">
-        <div className="flex-1 overflow-y-auto p-4 md:p-10 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto px-4 pb-4 pt-16 md:p-10 custom-scrollbar">
           <div className={`max-w-6xl mx-auto w-full ${activeView === View.MEMO ? 'h-full' : ''}`}>
             {activeView === View.DASHBOARD && (
               <Dashboard

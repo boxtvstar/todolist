@@ -105,12 +105,25 @@ export const updateMemoInDb = async (memoId: string, updates: Partial<Memo>) => 
 };
 
 export const deleteMemoFromDb = async (memoId: string) => {
-    await deleteDoc(doc(db, MEMOS_COLLECTION, memoId));
+    await deleteDoc(doc(db, "memos", memoId));
 };
 
-export const uploadMemoImage = async (userId: string, file: File): Promise<string> => {
-    const timestamp = Date.now();
-    const storageRef = ref(storage, `memos/${userId}/${timestamp}_${file.name}`);
+// Reminders
+export const addReminderToDb = async (userId: string, reminder: any) => {
+    await setDoc(doc(db, "reminders", reminder.id), { ...reminder, userId });
+};
+
+export const updateReminderInDb = async (reminderId: string, updates: any) => {
+    await updateDoc(doc(db, "reminders", reminderId), updates);
+};
+
+export const deleteReminderFromDb = async (reminderId: string) => {
+    await deleteDoc(doc(db, "reminders", reminderId));
+};
+
+export const uploadMemoImage = async (file: File, userId: string): Promise<string> => {
+    if (!storage) throw new Error("Storage not initialized");
+    const storageRef = ref(storage, `memos/${userId}/${Date.now()}_${file.name}`);
     const snapshot = await uploadBytes(storageRef, file);
-    return await getDownloadURL(snapshot.ref);
+    return getDownloadURL(snapshot.ref);
 };

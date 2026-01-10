@@ -35,6 +35,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     { view: View.DASHBOARD, label: '오늘의 할 일', icon: '⚡' },
     { view: View.PROJECTS, label: '전체 프로젝트', icon: '📂' },
     { view: View.CALENDAR, label: '스케줄러', icon: '🗓️' },
+    { view: View.REMINDER, label: '알림 리마인더', icon: '🔔' },
     { view: View.MEMO, label: '메모장', icon: '📝' },
     { view: View.HISTORY, label: '완료 아카이브', icon: '🏆' },
   ];

@@ -1,15 +1,17 @@
 
 import React, { useState, useMemo } from 'react';
-import { Task, Category } from '../types';
+import { Task, Category, Project, Reminder } from '../types';
 
 interface CalendarViewProps {
   tasks: Task[];
+  projects: Project[];
+  reminders: Reminder[];
   categories: Category[];
   toggleTask: (id: string) => void;
   addTask: (title: string, catId: string, dueDate: string) => void;
 }
 
-const CalendarView: React.FC<CalendarViewProps> = ({ tasks, categories, toggleTask, addTask }) => {
+const CalendarView: React.FC<CalendarViewProps> = ({ tasks, projects = [], reminders = [], categories, toggleTask, addTask }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDateStr, setSelectedDateStr] = useState<string>(new Date().toISOString().split('T')[0]);
   const [newTaskTitle, setNewTaskTitle] = useState('');
@@ -39,6 +41,18 @@ const CalendarView: React.FC<CalendarViewProps> = ({ tasks, categories, toggleTa
   const tasksForSelectedDate = useMemo(() => {
     return tasks.filter(t => t.dueDate === selectedDateStr);
   }, [tasks, selectedDateStr]);
+
+  const projectsForSelectedDate = useMemo(() => {
+    return projects.filter(p => p.deadline === selectedDateStr);
+  }, [projects, selectedDateStr]);
+
+  const remindersForSelectedDate = useMemo(() => {
+    // Filter reminders that have ALERTS for the selected date
+    // AND reminders that are SET for the selected date (Target Date)
+    // User request: "contents registered in notification reminder should also be displayed"
+    // Usually this means the target date. 
+    return reminders.filter(r => r.date === selectedDateStr && !r.completed);
+  }, [reminders, selectedDateStr]);
 
   const activeTasksForDate = tasksForSelectedDate.filter(t => !t.completed);
   const completedTasksForDate = tasksForSelectedDate.filter(t => t.completed);
@@ -76,11 +90,17 @@ const CalendarView: React.FC<CalendarViewProps> = ({ tasks, categories, toggleTa
             if (dayObj.day === 0) return <div key={`empty-${idx}`} />;
 
             const dayTasks = tasks.filter(t => t.dueDate === dayObj.dateStr);
+            const dayProjects = projects.filter(p => p.deadline === dayObj.dateStr);
+            const dayReminders = reminders.filter(r => r.date === dayObj.dateStr && !r.completed);
+
             const isSelected = selectedDateStr === dayObj.dateStr;
             const today = new Date();
             const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
             const isToday = todayStr === dayObj.dateStr;
             const isSunday = new Date(dayObj.dateStr).getDay() === 0;
+
+            const totalItems = dayTasks.length + dayProjects.length + dayReminders.length;
+            const displayLimit = 3;
 
             return (
               <button
@@ -99,10 +119,20 @@ const CalendarView: React.FC<CalendarViewProps> = ({ tasks, categories, toggleTa
                   {dayObj.day}
                 </span>
                 <div className="w-full space-y-1 mt-1">
-                  {dayTasks.slice(0, 3).map(t => (
+                  {/* Projects First */}
+                  {dayProjects.slice(0, displayLimit).map(p => (
+                    <div key={p.id} className="h-1.5 w-full rounded-full bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.5)]" />
+                  ))}
+                  {/* Reminders Next */}
+                  {dayReminders.slice(0, Math.max(0, displayLimit - dayProjects.length)).map(r => (
+                    <div key={r.id} className="h-1.5 w-full rounded-full bg-[#facc15] shadow-[0_0_5px_rgba(250,204,21,0.5)]" />
+                  ))}
+                  {/* Tasks Next */}
+                  {dayTasks.slice(0, Math.max(0, displayLimit - dayProjects.length - dayReminders.length)).map(t => (
                     <div key={t.id} className={`h-1 w-full rounded-full ${t.completed ? 'bg-gray-800' : 'bg-[#4ade80]'}`} />
                   ))}
-                  {dayTasks.length > 3 && <p className="text-[8px] font-black text-gray-600 mt-0.5">+{dayTasks.length - 3}</p>}
+
+                  {totalItems > displayLimit && <p className="text-[8px] font-black text-gray-600 mt-0.5">+{totalItems - displayLimit}</p>}
                 </div>
               </button>
             );
@@ -137,9 +167,54 @@ const CalendarView: React.FC<CalendarViewProps> = ({ tasks, categories, toggleTa
           </div>
 
           <div className="flex-1 space-y-8">
+
+            {/* Projects Section */}
+            {projectsForSelectedDate.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                    <p className="text-[9px] font-black text-purple-400 uppercase tracking-[0.2em]">Projects Due</p>
+                  </div>
+                  <span className="text-[9px] font-black text-purple-500">{projectsForSelectedDate.length}</span>
+                </div>
+                <div className="space-y-2">
+                  {projectsForSelectedDate.map(p => (
+                    <div key={p.id} className="w-full p-3 rounded-xl bg-purple-500/10 border border-purple-500/20">
+                      <p className="text-xs font-bold text-white truncate">{p.name}</p>
+                      <p className="text-[10px] text-purple-300 mt-1">{p.progress}% Complete</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Reminders Section */}
+            {remindersForSelectedDate.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#facc15]" />
+                    <p className="text-[9px] font-black text-[#facc15] uppercase tracking-[0.2em]">Reminders</p>
+                  </div>
+                  <span className="text-[9px] font-black text-[#facc15]">{remindersForSelectedDate.length}</span>
+                </div>
+                <div className="space-y-2">
+                  {remindersForSelectedDate.map(r => (
+                    <div key={r.id} className="w-full p-3 rounded-xl bg-[#facc15]/10 border border-[#facc15]/20">
+                      <p className="text-xs font-bold text-white truncate">{r.title}</p>
+                      <div className="flex gap-1 mt-1">
+                        <span className="text-[9px] text-[#facc15]">🔔 {r.date}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div>
               <div className="flex items-center justify-between mb-3">
-                <p className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em]">Active</p>
+                <p className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em]">Active Tasks</p>
                 <span className="text-[9px] font-black text-[#4ade80]">{activeTasksForDate.length}</span>
               </div>
               <div className="space-y-2">

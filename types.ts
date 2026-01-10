@@ -4,7 +4,8 @@ export enum View {
   CALENDAR = 'CALENDAR',
   PROJECTS = 'PROJECTS',
   HISTORY = 'HISTORY',
-  MEMO = 'MEMO'
+  MEMO = 'MEMO',
+  REMINDER = 'REMINDER'
 }
 
 export enum ProjectStatus {
@@ -51,4 +52,15 @@ export interface Memo {
   images?: string[];
   updatedAt: string;
   createdAt: string;
+}
+
+export interface Reminder {
+  id: string;
+  title: string;
+  date: string; // Target date YYYY-MM-DD
+  alerts: number[]; // e.g. [0, 1, 3]
+  createdAt: string;
+  userId: string;
+  completed?: boolean;
+  completedAt?: string;
 }

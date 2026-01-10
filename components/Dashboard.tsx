@@ -1,23 +1,46 @@
 
 import React, { useState, useMemo } from 'react';
-import { Task, Category } from '../types';
+import { Task, Category, Reminder, View } from '../types';
 import TaskItem from './TaskItem';
 
 interface DashboardProps {
   tasks: Task[];
+  reminders: Reminder[];
   toggleTask: (id: string) => void;
   addTask: (title: string, catId: string) => void;
   categories: Category[];
   selectedProjectId: string | null;
   updateTask: (id: string, updates: Partial<Task>) => void;
   deleteTask: (id: string) => void;
+  onNavigate: (view: View) => void;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({
-  tasks, toggleTask, addTask, categories, selectedProjectId, updateTask, deleteTask
+  tasks, reminders = [], toggleTask, addTask, categories, selectedProjectId, updateTask, deleteTask, onNavigate
 }) => {
   const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [showNotifications, setShowNotifications] = useState(false);
   const today = new Date().toLocaleDateString('en-CA');
+
+  const activeAlerts = useMemo(() => {
+    return reminders.filter(r => {
+      if (r.completed) return false;
+      if (!r.alerts || r.alerts.length === 0) return false;
+
+      // Check if ANY alert condition is met
+      return r.alerts.some(days => {
+        const targetDate = new Date(r.date);
+        const alertDate = new Date(targetDate);
+        alertDate.setDate(targetDate.getDate() - days);
+
+        const alertDateStr = alertDate.toISOString().split('T')[0];
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        // Show if today is currently >= alert date AND <= target date
+        return todayStr >= alertDateStr && todayStr <= r.date;
+      });
+    });
+  }, [reminders]);
 
   const filteredTasks = useMemo(() => {
     // Show all tasks if selectedProjectId is active
@@ -68,8 +91,9 @@ const Dashboard: React.FC<DashboardProps> = ({
   return (
     <div className="space-y-10 fade-in py-2">
       {/* Header Summary Card */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-[#1c2621] to-[#0f1712] p-6 rounded-[2rem] border border-white/5 shadow-2xl">
-        <div className="absolute top-0 right-0 w-48 h-48 bg-[#4ade80]/5 blur-[80px] -translate-y-1/2 translate-x-1/2" />
+      {/* Header Summary Card */}
+      <div className="relative bg-gradient-to-br from-[#1c2621] to-[#0f1712] p-6 rounded-[2rem] border border-white/5 shadow-2xl">
+        <div className="absolute top-0 right-0 w-48 h-48 bg-[#4ade80]/5 blur-[80px] -translate-y-1/2 translate-x-1/2 pointer-events-none" />
 
         <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="space-y-2">
@@ -84,7 +108,48 @@ const Dashboard: React.FC<DashboardProps> = ({
             </p>
           </div>
 
-          <div className="flex items-center gap-5 bg-black/20 p-5 rounded-[1.5rem] border border-white/5 backdrop-blur-md">
+          <div className="flex items-center gap-5 bg-black/20 p-5 rounded-[1.5rem] border border-white/5 backdrop-blur-md relative">
+            {/* Notification Bell */}
+            <div className="relative">
+              <button
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="w-12 h-12 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all relative"
+              >
+                <span className="text-2xl">🔔</span>
+                {activeAlerts.length > 0 && (
+                  <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-[#1c2621] animate-pulse" />
+                )}
+              </button>
+
+              {showNotifications && (
+                <div className="absolute top-full right-0 mt-4 w-72 bg-[#1c2621] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50">
+                  <div className="p-4 border-b border-white/5 flex justify-between items-center">
+                    <h4 className="font-bold text-white text-sm">알림 센터</h4>
+                    <span className="text-xs text-[#4ade80] font-bold">{activeAlerts.length} Active</span>
+                  </div>
+                  <div className="max-h-60 overflow-y-auto">
+                    {activeAlerts.length === 0 ? (
+                      <p className="p-4 text-center text-xs text-gray-500">새로운 알림이 없습니다.</p>
+                    ) : (
+                      activeAlerts.map(alert => (
+                        <button
+                          key={alert.id}
+                          onClick={() => onNavigate(View.REMINDER)}
+                          className="w-full text-left p-4 hover:bg-white/5 border-b border-white/5 last:border-0 transition-all group"
+                        >
+                          <p className="text-white text-xs font-bold mb-1 group-hover:text-[#facc15]">{alert.title}</p>
+                          <div className="flex justify-between items-center">
+                            <p className="text-[10px] text-gray-400">목표일: {alert.date}</p>
+                            <span className="text-[10px] text-[#facc15] bg-[#facc15]/10 px-2 rounded">D-{Math.ceil((new Date(alert.date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))}</span>
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="relative w-20 h-20">
               {/* SVG Circular Progress */}
               <svg className="w-full h-full transform -rotate-90">

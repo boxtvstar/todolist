@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot, deleteField } from 'firebase/firestore';
-import { View, Task, Category, Project, ProjectStatus, Memo } from './types';
+import { View, Task, Category, Project, ProjectStatus, Memo, Reminder } from './types';
 import { INITIAL_CATEGORIES, INITIAL_PROJECTS } from './constants';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -21,9 +21,13 @@ import {
   addMemoToDb,
   updateMemoInDb,
   deleteMemoFromDb,
-  deleteCategoryFromDb
+  deleteCategoryFromDb,
+  addReminderToDb,
+  updateReminderInDb,
+  deleteReminderFromDb
 } from './services/db';
 import MemoView from './components/MemoView';
+import ReminderView from './components/ReminderView';
 
 const App: React.FC = () => {
   const { user, loading, logout } = useAuth();
@@ -36,6 +40,7 @@ const App: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
   const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS);
   const [memos, setMemos] = useState<Memo[]>([]);
+  const [reminders, setReminders] = useState<Reminder[]>([]);
 
   // Orphan Category Cleanup
   const hasRunCleanup = React.useRef(false);
@@ -43,15 +48,6 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!user || loading || hasRunCleanup.current) return;
     if (projects.length === 0 && tasks.length === 0 && categories.length === INITIAL_CATEGORIES.length) return; // Wait for data
-
-    // Allow a short delay to ensure initial data load is complete (though snapshots should trigger)
-    // Actually, snapshots update state. If we run this every time state updates but guard with ref, it's fine.
-    // However, we need to be carefully that 'categories' has actually loaded from DB.
-    // We can't robustly know if "empty" means "no data" or "not loaded yet" without a separate loading state for data.
-    // But assuming the listener fires at least once. 
-    // Let's rely on the fact that if we have categories that ARE orphan, we can delete them.
-    // Only run this if we have some data or at least some time passed? 
-    // Better: Run this once after a short delay to let all listeners fire first.
 
     const timer = setTimeout(() => {
       if (hasRunCleanup.current) return;
@@ -82,10 +78,7 @@ const App: React.FC = () => {
       setTasks([]);
       setProjects([]);
       setMemos([]);
-      // Keep initial categories or clear them? 
-      // Let's keep initial ones + user's custom ones if we merge them, 
-      // but simpler to just fetch user's categories.
-      // For now, reset to INITIAL just in case.
+      setReminders([]);
       setCategories(INITIAL_CATEGORIES);
       return;
     }
@@ -111,6 +104,13 @@ const App: React.FC = () => {
       setMemos(memoData);
     });
 
+    // Reminders Listener
+    const qReminders = query(collection(db, "reminders"), where("userId", "==", user.uid));
+    const unsubscribeReminders = onSnapshot(qReminders, (snapshot) => {
+      const reminderData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Reminder));
+      setReminders(reminderData);
+    });
+
     // Categories Listener
     const qCategories = query(collection(db, "categories"), where("userId", "==", user.uid));
     const unsubscribeCategories = onSnapshot(qCategories, (snapshot) => {
@@ -126,6 +126,7 @@ const App: React.FC = () => {
       unsubscribeProjects();
       unsubscribeCategories();
       unsubscribeMemos();
+      unsubscribeReminders();
     };
   }, [user]);
 
@@ -248,16 +249,12 @@ const App: React.FC = () => {
 
         if (!isDefault) {
           // Check if any other project uses this category
-          // Note: 'projects' state might not be updated yet, so filter out the deleted one manually
           const otherProjectsUse = projects.filter(p => p.id !== id).some(p => p.categoryId === catId);
-
-          // Check if any task uses this category
           const tasksUse = tasks.some(t => t.categoryId === catId);
 
           if (!otherProjectsUse && !tasksUse) {
             try {
               await deleteCategoryFromDb(catId);
-              // Optimistically remove from state to reflect immediately
               setCategories(prev => prev.filter(c => c.id !== catId));
             } catch (err) {
               console.error("Failed to cleanup category:", err);
@@ -322,6 +319,51 @@ const App: React.FC = () => {
     }
   };
 
+  const saveReminder = async (reminderData: Omit<Reminder, 'createdAt' | 'userId'>) => {
+    if (!user) return;
+    try {
+      if (reminders.some(r => r.id === reminderData.id)) {
+        // Update
+        await updateReminderInDb(reminderData.id, reminderData);
+      } else {
+        // Create
+        const newReminder: Reminder = {
+          ...reminderData,
+          createdAt: new Date().toISOString(),
+          userId: user.uid
+        };
+        await addReminderToDb(user.uid, newReminder);
+      }
+    } catch (error: any) {
+      console.error("Reminder save failed:", error);
+      alert("리마인더 저장 실패");
+    }
+  };
+
+  const deleteReminder = async (id: string) => {
+    try {
+      await deleteReminderFromDb(id);
+    } catch (error: any) {
+      console.error("Delete reminder failed:", error);
+    }
+  };
+
+  const toggleReminder = async (id: string) => {
+    if (!user) return;
+    const reminder = reminders.find(r => r.id === id);
+    if (reminder) {
+      const updates = {
+        completed: !reminder.completed,
+        completedAt: !reminder.completed ? new Date().toISOString() : deleteField()
+      };
+      try {
+        await updateReminderInDb(id, updates);
+      } catch (error) {
+        console.error("Failed to toggle reminder", error);
+      }
+    }
+  };
+
   return (
     <div className="flex h-screen overflow-hidden text-white bg-[#0f1712]">
       <div className="w-[30%] shrink-0">
@@ -349,20 +391,32 @@ const App: React.FC = () => {
             {activeView === View.DASHBOARD && (
               <Dashboard
                 tasks={tasks}
+                reminders={reminders}
                 toggleTask={toggleTask}
                 addTask={addTask}
                 categories={categories}
                 selectedProjectId={selectedProjectId}
                 updateTask={updateTask}
                 deleteTask={deleteTask}
+                onNavigate={setActiveView}
               />
             )}
             {activeView === View.CALENDAR && (
               <CalendarView
                 tasks={tasks}
+                projects={projects}
+                reminders={reminders}
                 categories={categories}
                 toggleTask={toggleTask}
                 addTask={addTask}
+              />
+            )}
+            {activeView === View.REMINDER && (
+              <ReminderView
+                reminders={reminders}
+                saveReminder={saveReminder}
+                deleteReminder={deleteReminder}
+                toggleReminder={toggleReminder}
               />
             )}
             {activeView === View.PROJECTS && (
@@ -374,18 +428,21 @@ const App: React.FC = () => {
                 deleteProject={deleteProject}
                 updateProgress={updateProjectProgress}
                 onAddCategory={handleAddCategory}
-                startProjectCreation={autoStartProjectCreation}
-                onProjectCreationStarted={() => setAutoStartProjectCreation(false)}
+                autoStartCreation={autoStartProjectCreation}
+                setAutoStartCreation={() => setAutoStartProjectCreation(false)}
               />
             )}
             {activeView === View.HISTORY && (
               <HistoryView
                 tasks={tasks}
                 projects={projects}
+                reminders={reminders}
                 toggleTask={toggleTask}
                 deleteTask={deleteTask}
                 updateProject={updateProject}
                 deleteProject={deleteProject}
+                toggleReminder={toggleReminder}
+                deleteReminder={deleteReminder}
               />
             )}
             {activeView === View.MEMO && (

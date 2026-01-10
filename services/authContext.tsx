@@ -1,8 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import {
     GoogleAuthProvider,
-    signInWithRedirect,
-    getRedirectResult,
+    signInWithPopup,
     signOut,
     onAuthStateChanged,
     User,
@@ -35,9 +34,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             try {
                 // Ensure persistence is set to LOCAL (survives browser restarts)
                 await setPersistence(auth, browserLocalPersistence);
-
-                // Check if we are returning from a redirect login
-                await getRedirectResult(auth);
             } catch (error) {
                 console.error("Auth initialization failed:", error);
             }
@@ -57,9 +53,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const provider = new GoogleAuthProvider();
         try {
             await setPersistence(auth, browserLocalPersistence);
-            await signInWithRedirect(auth, provider);
+            await signInWithPopup(auth, provider);
         } catch (error) {
-            console.error("Login redirect failed:", error);
+            console.error("Login failed:", error);
+            alert("로그인에 실패했습니다. 팝업 차단이 되어있는지 확인해주세요.");
         }
     };
 

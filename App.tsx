@@ -364,16 +364,45 @@ const App: React.FC = () => {
     }
   };
 
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const handleMobileNav = (view: View) => {
+    setActiveView(view);
+    setSelectedProjectId(null);
+    setMobileMenuOpen(false);
+  };
+
   return (
-    <div className="flex h-screen overflow-hidden text-white bg-[#0f1712]">
-      <div className="w-[30%] shrink-0">
+    <div className="flex h-screen overflow-hidden text-white bg-[#0f1712] relative">
+      {/* Mobile Menu Button */}
+      <button
+        onClick={() => setMobileMenuOpen(true)}
+        className="md:hidden absolute top-4 left-4 z-50 p-2 bg-[#0d1310]/80 rounded-lg border border-white/10 backdrop-blur-sm shadow-lg text-2xl"
+      >
+        ☰
+      </button>
+
+      {/* Mobile Drawer Overlay */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black/60 z-40 md:hidden backdrop-blur-sm transition-opacity"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Sidebar Container - Responsive */}
+      <div className={`
+        fixed inset-y-0 left-0 z-50 w-[80%] max-w-[320px] bg-[#0d1310] transition-transform duration-300 transform shadow-2xl border-r border-white/5
+        md:relative md:translate-x-0 md:w-[30%] md:max-w-none md:shadow-none md:z-0
+        ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}>
         <Sidebar
           activeView={activeView}
-          setActiveView={(view) => { setActiveView(view); setSelectedProjectId(null); }}
+          setActiveView={handleMobileNav}
           categories={categories}
           projects={projects}
           selectedProjectId={selectedProjectId}
-          setSelectedProjectId={setSelectedProjectId}
+          setSelectedProjectId={(id) => { setSelectedProjectId(id); setMobileMenuOpen(false); }}
           tasks={tasks}
           onAddCategory={handleAddCategory}
           user={user}
@@ -381,11 +410,12 @@ const App: React.FC = () => {
           onStartNewProject={() => {
             setActiveView(View.PROJECTS);
             setAutoStartProjectCreation(true);
+            setMobileMenuOpen(false);
           }}
         />
       </div>
 
-      <main className="w-[70%] flex flex-col min-w-0 bg-[#1c2621]">
+      <main className="w-full md:w-[70%] flex flex-col min-w-0 bg-[#1c2621]">
         <div className="flex-1 overflow-y-auto p-4 md:p-10 custom-scrollbar">
           <div className={`max-w-6xl mx-auto w-full ${activeView === View.MEMO ? 'h-full' : ''}`}>
             {activeView === View.DASHBOARD && (

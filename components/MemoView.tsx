@@ -36,8 +36,10 @@ const MemoView: React.FC<MemoViewProps> = ({ memos, addMemo, updateMemo, deleteM
     }, [memos, searchText]);
 
     // Auto-select latest memo on mount or when memos change if none selected
+    // Auto-select latest memo on mount or when memos change if none selected (Desktop only)
     useEffect(() => {
-        if (!selectedMemoId && filteredMemos.length > 0 && !isEditing) {
+        const isDesktop = window.innerWidth >= 768; // Tailwind md breakpoint
+        if (isDesktop && !selectedMemoId && filteredMemos.length > 0 && !isEditing) {
             setSelectedMemoId(filteredMemos[0].id);
         }
     }, [filteredMemos, selectedMemoId, isEditing]);

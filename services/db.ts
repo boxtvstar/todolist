@@ -12,7 +12,7 @@ import {
 } from "firebase/firestore";
 import { db, storage } from "./firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { Task, Project, Category, Memo } from "../types";
+import { Task, Project, Category, Memo, VideoNote } from "../types";
 
 // Collections
 const TASKS_COLLECTION = "tasks";
@@ -126,4 +126,22 @@ export const uploadMemoImage = async (file: File, userId: string): Promise<strin
     const storageRef = ref(storage, `memos/${userId}/${Date.now()}_${file.name}`);
     const snapshot = await uploadBytes(storageRef, file);
     return getDownloadURL(snapshot.ref);
+};
+
+// Video Notes
+export const addVideoNoteToDb = async (userId: string, videoNote: VideoNote) => {
+    const { id, ...noteData } = videoNote;
+    const validNoteData = Object.fromEntries(
+        Object.entries(noteData).filter(([_, v]) => v !== undefined)
+    );
+    await setDoc(doc(db, "videoNotes", id), { ...validNoteData, userId });
+};
+
+export const updateVideoNoteInDb = async (noteId: string, updates: Partial<VideoNote>) => {
+    const noteRef = doc(db, "videoNotes", noteId);
+    await updateDoc(noteRef, updates);
+};
+
+export const deleteVideoNoteFromDb = async (noteId: string) => {
+    await deleteDoc(doc(db, "videoNotes", noteId));
 };

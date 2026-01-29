@@ -5,7 +5,8 @@ export enum View {
   PROJECTS = 'PROJECTS',
   HISTORY = 'HISTORY',
   MEMO = 'MEMO',
-  REMINDER = 'REMINDER'
+  REMINDER = 'REMINDER',
+  VIDEO_NOTE = 'VIDEO_NOTE'
 }
 
 export enum ProjectStatus {
@@ -63,4 +64,15 @@ export interface Reminder {
   userId: string;
   completed?: boolean;
   completedAt?: string;
+}
+
+export interface VideoNote {
+  id: string;
+  videoUrls: string[]; // 여러 유튜브 URL 가능
+  script: string; // 대본 (메인)
+  memo: string; // 메모 (서브)
+  completed: boolean; // 완료 여부
+  createdAt: string;
+  updatedAt: string;
+  userId: string;
 }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot, deleteField } from 'firebase/firestore';
-import { View, Task, Category, Project, ProjectStatus, Memo, Reminder } from './types';
+import { View, Task, Category, Project, ProjectStatus, Memo, Reminder, VideoNote } from './types';
 import { INITIAL_CATEGORIES, INITIAL_PROJECTS } from './constants';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -24,10 +24,14 @@ import {
   deleteCategoryFromDb,
   addReminderToDb,
   updateReminderInDb,
-  deleteReminderFromDb
+  deleteReminderFromDb,
+  addVideoNoteToDb,
+  updateVideoNoteInDb,
+  deleteVideoNoteFromDb
 } from './services/db';
 import MemoView from './components/MemoView';
 import ReminderView from './components/ReminderView';
+import VideoNoteView from './components/VideoNoteView';
 
 const App: React.FC = () => {
   const { user, loading, logout } = useAuth();
@@ -41,6 +45,7 @@ const App: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS);
   const [memos, setMemos] = useState<Memo[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [videoNotes, setVideoNotes] = useState<VideoNote[]>([]);
 
   // Orphan Category Cleanup
   const hasRunCleanup = React.useRef(false);
@@ -79,6 +84,7 @@ const App: React.FC = () => {
       setProjects([]);
       setMemos([]);
       setReminders([]);
+      setVideoNotes([]);
       setCategories(INITIAL_CATEGORIES);
       return;
     }
@@ -121,12 +127,20 @@ const App: React.FC = () => {
       setCategories([...INITIAL_CATEGORIES, ...filteredCustom]);
     });
 
+    // Video Notes Listener
+    const qVideoNotes = query(collection(db, "videoNotes"), where("userId", "==", user.uid));
+    const unsubscribeVideoNotes = onSnapshot(qVideoNotes, (snapshot) => {
+      const videoNoteData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as VideoNote));
+      setVideoNotes(videoNoteData);
+    });
+
     return () => {
       unsubscribeTasks();
       unsubscribeProjects();
       unsubscribeCategories();
       unsubscribeMemos();
       unsubscribeReminders();
+      unsubscribeVideoNotes();
     };
   }, [user]);
 
@@ -364,6 +378,46 @@ const App: React.FC = () => {
     }
   };
 
+  const addVideoNote = async (): Promise<string> => {
+    if (!user) return "";
+    const id = Date.now().toString();
+    try {
+      const newNote: VideoNote = {
+        id,
+        videoUrls: [],
+        script: '',
+        memo: '',
+        completed: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        userId: user.uid
+      };
+      await addVideoNoteToDb(user.uid, newNote);
+      return id;
+    } catch (error: any) {
+      console.error("VideoNote add failed:", error);
+      alert(`노트 추가 실패: ${error.message}`);
+      return "";
+    }
+  };
+
+  const updateVideoNote = async (id: string, updates: Partial<VideoNote>) => {
+    try {
+      await updateVideoNoteInDb(id, updates);
+    } catch (error: any) {
+      console.error("VideoNote update failed:", error);
+    }
+  };
+
+  const deleteVideoNote = async (id: string) => {
+    try {
+      await deleteVideoNoteFromDb(id);
+    } catch (error: any) {
+      console.error("VideoNote delete failed:", error);
+      alert(`노트 삭제 실패: ${error.message}`);
+    }
+  };
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleMobileNav = (view: View) => {
@@ -467,12 +521,15 @@ const App: React.FC = () => {
                 tasks={tasks}
                 projects={projects}
                 reminders={reminders}
+                videoNotes={videoNotes}
                 toggleTask={toggleTask}
                 deleteTask={deleteTask}
                 updateProject={updateProject}
                 deleteProject={deleteProject}
                 toggleReminder={toggleReminder}
                 deleteReminder={deleteReminder}
+                updateVideoNote={updateVideoNote}
+                deleteVideoNote={deleteVideoNote}
               />
             )}
             {activeView === View.MEMO && (
@@ -481,6 +538,14 @@ const App: React.FC = () => {
                 addMemo={addMemo}
                 updateMemo={updateMemo}
                 deleteMemo={deleteMemo}
+              />
+            )}
+            {activeView === View.VIDEO_NOTE && (
+              <VideoNoteView
+                videoNotes={videoNotes}
+                addVideoNote={addVideoNote}
+                updateVideoNote={updateVideoNote}
+                deleteVideoNote={deleteVideoNote}
               />
             )}
           </div>

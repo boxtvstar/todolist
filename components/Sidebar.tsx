@@ -37,6 +37,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     { view: View.CALENDAR, label: '스케줄러', icon: '🗓️' },
     { view: View.REMINDER, label: '알림 리마인더', icon: '🔔' },
     { view: View.MEMO, label: '메모장', icon: '📝' },
+    { view: View.VIDEO_NOTE, label: '영상 작업 노트', icon: '🎬' },
     { view: View.HISTORY, label: '완료 아카이브', icon: '🏆' },
   ];
 
@@ -71,25 +72,25 @@ const Sidebar: React.FC<SidebarProps> = ({
       {/* Decorative Background Glow */}
       <div className="absolute -top-20 -left-20 w-64 h-64 bg-[#4ade80]/5 blur-[100px] pointer-events-none" />
 
-      <div className="p-8 pb-4 relative z-10">
-        <h1 className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-gradient-to-br from-[#4ade80] to-[#22c55e] rounded-xl flex items-center justify-center text-black shadow-lg shadow-emerald-500/20">
-            <span className="text-xl font-black italic">S</span>
+      {/* Header with Logo and Clock */}
+      <div className="p-6 pb-4 relative z-10 space-y-3">
+        {/* Logo and Time in one row */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-[#4ade80] to-[#22c55e] rounded-xl flex items-center justify-center text-black shadow-lg shadow-emerald-500/20">
+              <span className="text-2xl font-black italic">S</span>
+            </div>
+            <span className="text-lg font-black tracking-tight text-white uppercase">SMART PLANNER</span>
           </div>
-          <span className="text-lg font-black tracking-tight text-white uppercase">SMART PLANNER</span>
-        </h1>
-      </div>
-
-      {/* Real-time Clock Widget */}
-      <div className="px-6 pb-2">
-        <div className="bg-[#1c2621]/50 border border-white/5 rounded-2xl p-3 text-center space-y-0.5 backdrop-blur-md">
-          <div className="text-[9px] font-black text-[#4ade80] uppercase tracking-[0.3em] opacity-80">{timeData.weekDay}</div>
-          <div className="text-xl font-black text-white tracking-widest font-mono">{timeData.time}</div>
-          <div className="text-[9px] font-bold text-gray-500">{timeData.year}.{String(timeData.month).padStart(2, '0')}.{String(timeData.day).padStart(2, '0')}</div>
+          {/* Compact Clock */}
+          <div className="text-right">
+            <div className="text-sm font-black text-white tracking-wider font-mono">{timeData.time}</div>
+            <div className="text-[10px] font-bold text-gray-500">{timeData.month}/{timeData.day}</div>
+          </div>
         </div>
       </div>
 
-      <div className="px-6 py-4">
+      <div className="px-6 py-2">
         <button
           onClick={onStartNewProject}
           className="w-full py-3.5 bg-white/5 hover:bg-[#4ade80] text-[#4ade80] hover:text-[#0d1310] font-bold rounded-2xl flex items-center justify-center gap-2 transition-all duration-300 border border-[#4ade80]/20 hover:border-transparent group"

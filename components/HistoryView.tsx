@@ -1,27 +1,31 @@
 import React, { useState, useMemo } from 'react';
-import { Task, Project, ProjectStatus, Reminder } from '../types';
+import { Task, Project, ProjectStatus, Reminder, VideoNote } from '../types';
 
 interface HistoryViewProps {
   tasks: Task[];
   projects: Project[];
   reminders: Reminder[];
+  videoNotes: VideoNote[];
   toggleTask: (id: string) => void;
   deleteTask: (id: string) => void;
   updateProject: (id: string, updates: Partial<Project>) => void;
   deleteProject: (id: string) => void;
   toggleReminder: (id: string) => void;
   deleteReminder: (id: string) => void;
+  updateVideoNote: (id: string, updates: Partial<VideoNote>) => void;
+  deleteVideoNote: (id: string) => void;
 }
 
 const HistoryView: React.FC<HistoryViewProps> = ({
-  tasks, projects, reminders,
+  tasks, projects, reminders, videoNotes,
   toggleTask, deleteTask,
   updateProject, deleteProject,
-  toggleReminder, deleteReminder
+  toggleReminder, deleteReminder,
+  updateVideoNote, deleteVideoNote
 }) => {
-  const [deleteData, setDeleteData] = useState<{ type: 'task' | 'project' | 'reminder', id: string } | null>(null);
+  const [deleteData, setDeleteData] = useState<{ type: 'task' | 'project' | 'reminder' | 'videoNote', id: string } | null>(null);
 
-  const handleDeleteClick = (type: 'task' | 'project' | 'reminder', id: string) => {
+  const handleDeleteClick = (type: 'task' | 'project' | 'reminder' | 'videoNote', id: string) => {
     setDeleteData({ type, id });
   };
 
@@ -33,6 +37,8 @@ const HistoryView: React.FC<HistoryViewProps> = ({
       deleteProject(deleteData.id);
     } else if (deleteData.type === 'reminder') {
       deleteReminder(deleteData.id);
+    } else if (deleteData.type === 'videoNote') {
+      deleteVideoNote(deleteData.id);
     }
     setDeleteData(null);
   };
@@ -61,6 +67,18 @@ const HistoryView: React.FC<HistoryViewProps> = ({
       .sort((a, b) => new Date(b.completedAt || b.createdAt).getTime() - new Date(a.completedAt || a.createdAt).getTime());
   }, [reminders, search]);
 
+  const completedVideoNotes = useMemo(() => {
+    const getTitle = (script: string) => {
+      if (!script.trim()) return '(제목 없음)';
+      return script.split('\n')[0].trim();
+    };
+    
+    return videoNotes
+      .filter(v => v.completed)
+      .filter(v => getTitle(v.script).toLowerCase().includes(search.toLowerCase()) || v.memo.toLowerCase().includes(search.toLowerCase()))
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  }, [videoNotes, search]);
+
   return (
     <div className="fade-in space-y-12 py-2">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-gradient-to-br from-[#1c2621] to-transparent p-6 rounded-[2rem] border border-white/5">
@@ -70,7 +88,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({
         </div>
         <div className="flex flex-col items-center bg-[#0d1310] p-4 rounded-2xl border border-white/10 shadow-xl min-w-[150px]">
           <p className="text-[9px] font-black text-[#4ade80] uppercase tracking-[0.2em] mb-1 opacity-60">Total Victories</p>
-          <div className="text-3xl font-black text-[#4ade80] tracking-tighter shadow-emerald-500/20">{completedTasks.length + completedProjects.length + completedReminders.length}</div>
+          <div className="text-3xl font-black text-[#4ade80] tracking-tighter shadow-emerald-500/20">{completedTasks.length + completedProjects.length + completedReminders.length + completedVideoNotes.length}</div>
         </div>
       </div>
 
@@ -88,6 +106,60 @@ const HistoryView: React.FC<HistoryViewProps> = ({
       </div>
 
       <div className="space-y-8 px-2">
+        {/* Video Notes Section */}
+        {completedVideoNotes.length > 0 && (
+          <div className="space-y-3">
+            <h3 className="text-sm font-black text-gray-500 uppercase tracking-widest pl-2">Completed Video Notes</h3>
+            {completedVideoNotes.map(note => {
+              const getTitle = (script: string) => {
+                if (!script.trim()) return '(제목 없음)';
+                const firstLine = script.split('\n')[0].trim();
+                return firstLine.length > 50 ? firstLine.substring(0, 50) + '...' : firstLine;
+              };
+              
+              return (
+                <div
+                  key={note.id}
+                  className="flex items-center justify-between p-4 bg-[#1c2621]/20 border border-white/5 rounded-2xl group transition-all duration-500 hover:bg-purple-500/5 hover:border-purple-500/20 shadow-lg"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-xl shadow-lg border border-purple-500/20 shrink-0">🎬</div>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-base font-bold text-white truncate group-hover:text-purple-400 transition-colors">{getTitle(note.script)}</h4>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {note.videoUrls.length > 0 && (
+                            <span className="text-[9px] text-purple-400 font-black bg-purple-500/5 border border-purple-500/10 px-1.5 py-0.5 rounded text-[8px]">
+                              🎥 {note.videoUrls.length}개 영상
+                            </span>
+                          )}
+                          <span className="text-[9px] text-gray-600 font-bold">
+                            {new Date(note.updatedAt).toLocaleDateString('ko-KR', { year: 'numeric', month: 'numeric', day: 'numeric' })} 완료
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0 duration-500">
+                    <button
+                      onClick={() => updateVideoNote(note.id, { completed: false })}
+                      className="px-3 py-1.5 bg-purple-500/10 hover:bg-purple-500 border border-purple-500/20 rounded-lg text-[10px] font-black text-purple-400 hover:text-white transition-all"
+                    >
+                      복원
+                    </button>
+                    <button
+                      onClick={() => handleDeleteClick('videoNote', note.id)}
+                      className="px-3 py-1.5 bg-red-500/5 hover:bg-red-500 text-red-500 hover:text-white rounded-lg text-[10px] font-black border border-red-500/10 transition-all"
+                    >
+                      삭제
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         {/* Projects Section */}
         {completedProjects.length > 0 && (
           <div className="space-y-3">
@@ -210,7 +282,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({
           </div>
         )}
 
-        {completedProjects.length === 0 && completedTasks.length === 0 && completedReminders.length === 0 && (
+        {completedProjects.length === 0 && completedTasks.length === 0 && completedReminders.length === 0 && completedVideoNotes.length === 0 && (
           <div className="py-32 text-center border border-dashed border-white/5 rounded-[3rem] bg-white/[0.01]">
             <div className="text-6xl mb-6 opacity-10">🏺</div>
             <p className="text-gray-600 font-black text-xl">아직 기록된 성취가 없습니다.</p>
@@ -230,7 +302,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({
               <h3 className="text-xl font-black text-white">기록 영구 삭제</h3>
               <p className="text-gray-400 text-xs leading-relaxed">
                 이 작업은 되돌릴 수 없습니다.<br />
-                정말로 이 {deleteData.type === 'project' ? '프로젝트' : deleteData.type === 'reminder' ? '리마인더' : '과업'} 기록을 삭제하시겠습니까?
+                정말로 이 {deleteData.type === 'project' ? '프로젝트' : deleteData.type === 'reminder' ? '리마인더' : deleteData.type === 'videoNote' ? '영상 노트' : '과업'} 기록을 삭제하시겠습니까?
               </p>
             </div>
             <div className="flex border-t border-white/5 bg-black/20">

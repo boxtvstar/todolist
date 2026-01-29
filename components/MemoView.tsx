@@ -105,6 +105,19 @@ const MemoView: React.FC<MemoViewProps> = ({ memos, addMemo, updateMemo, deleteM
         });
     };
 
+    const [copySuccess, setCopySuccess] = useState(false);
+
+    const handleCopyContent = async () => {
+        if (!localContent.trim()) return;
+        try {
+            await navigator.clipboard.writeText(localContent);
+            setCopySuccess(true);
+            setTimeout(() => setCopySuccess(false), 2000);
+        } catch (err) {
+            console.error('복사 실패:', err);
+        }
+    };
+
     return (
         <div className="flex h-full gap-6 fade-in py-2">
             {/* Sidebar List - Hidden on mobile if memo selected */}
@@ -173,7 +186,7 @@ const MemoView: React.FC<MemoViewProps> = ({ memos, addMemo, updateMemo, deleteM
                 {selectedMemo ? (
                     <>
                         <div className="p-8 pb-4">
-                            <div className="flex items-center justify-between mb-4 opacity-50">
+                            <div className="flex items-center justify-between mb-4">
                                 <div className="flex items-center gap-4">
                                     {/* Mobile Back Button */}
                                     <button
@@ -182,14 +195,38 @@ const MemoView: React.FC<MemoViewProps> = ({ memos, addMemo, updateMemo, deleteM
                                     >
                                         ←
                                     </button>
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-[#4ade80]">Last Edited: {new Date(selectedMemo.updatedAt).toLocaleString('ko-KR')}</span>
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-[#4ade80] opacity-50">Last Edited: {new Date(selectedMemo.updatedAt).toLocaleString('ko-KR')}</span>
                                 </div>
-                                <button
-                                    onClick={() => setDeleteId(selectedMemo.id)}
-                                    className="p-2 hover:bg-red-500/10 text-gray-500 hover:text-red-500 rounded-lg transition-colors"
-                                >
-                                    🗑️
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={handleCopyContent}
+                                        className={`
+                                            flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all
+                                            ${copySuccess 
+                                              ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
+                                              : 'bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10 hover:text-white'
+                                            }
+                                        `}
+                                    >
+                                        {copySuccess ? (
+                                            <>
+                                                <span>✓</span>
+                                                <span>복사됨</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span>📋</span>
+                                                <span>복사</span>
+                                            </>
+                                        )}
+                                    </button>
+                                    <button
+                                        onClick={() => setDeleteId(selectedMemo.id)}
+                                        className="p-2 hover:bg-red-500/10 text-gray-500 hover:text-red-500 rounded-lg transition-colors opacity-50 hover:opacity-100"
+                                    >
+                                        🗑️
+                                    </button>
+                                </div>
                             </div>
                         </div>
 

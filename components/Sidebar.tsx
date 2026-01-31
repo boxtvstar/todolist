@@ -38,6 +38,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     { view: View.REMINDER, label: '알림 리마인더', icon: '🔔' },
     { view: View.MEMO, label: '메모장', icon: '📝' },
     { view: View.VIDEO_NOTE, label: '영상 작업 노트', icon: '🎬' },
+    { view: View.FAVORITES, label: '즐겨찾기 사이트', icon: '🌐' },
     { view: View.HISTORY, label: '완료 아카이브', icon: '🏆' },
   ];
 

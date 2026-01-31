@@ -12,7 +12,7 @@ import {
 } from "firebase/firestore";
 import { db, storage } from "./firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { Task, Project, Category, Memo, VideoNote } from "../types";
+import { Task, Project, Category, Memo, VideoNote, FavoriteSite } from "../types";
 
 // Collections
 const TASKS_COLLECTION = "tasks";
@@ -80,6 +80,11 @@ export const addCategoryToDb = async (userId: string, category: Category) => {
     await setDoc(doc(db, CATEGORIES_COLLECTION, id), { ...categoryData, userId });
 };
 
+export const updateCategoryInDb = async (categoryId: string, updates: Partial<Category>) => {
+    const categoryRef = doc(db, CATEGORIES_COLLECTION, categoryId);
+    await updateDoc(categoryRef, updates);
+};
+
 export const deleteCategoryFromDb = async (categoryId: string) => {
     await deleteDoc(doc(db, CATEGORIES_COLLECTION, categoryId));
 };
@@ -144,4 +149,19 @@ export const updateVideoNoteInDb = async (noteId: string, updates: Partial<Video
 
 export const deleteVideoNoteFromDb = async (noteId: string) => {
     await deleteDoc(doc(db, "videoNotes", noteId));
+};
+
+// Favorite Sites
+export const addFavoriteSiteToDb = async (userId: string, site: FavoriteSite) => {
+    const { id, ...siteData } = site;
+    await setDoc(doc(db, "favoriteSites", id), { ...siteData, userId });
+};
+
+export const updateFavoriteSiteInDb = async (siteId: string, updates: Partial<FavoriteSite>) => {
+    const siteRef = doc(db, "favoriteSites", siteId);
+    await updateDoc(siteRef, updates);
+};
+
+export const deleteFavoriteSiteFromDb = async (siteId: string) => {
+    await deleteDoc(doc(db, "favoriteSites", siteId));
 };

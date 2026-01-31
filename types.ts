@@ -6,7 +6,8 @@ export enum View {
   HISTORY = 'HISTORY',
   MEMO = 'MEMO',
   REMINDER = 'REMINDER',
-  VIDEO_NOTE = 'VIDEO_NOTE'
+  VIDEO_NOTE = 'VIDEO_NOTE',
+  FAVORITES = 'FAVORITES'
 }
 
 export enum ProjectStatus {
@@ -74,5 +75,16 @@ export interface VideoNote {
   completed: boolean; // 완료 여부
   createdAt: string;
   updatedAt: string;
+  userId: string;
+}
+
+export interface FavoriteSite {
+  id: string;
+  title: string;
+  url: string;
+  description?: string;
+  categoryId?: string;
+  icon?: string;
+  createdAt: string;
   userId: string;
 }

@@ -3,10 +3,9 @@ import React from 'react';
 import { Category, ProjectStatus, Project } from './types';
 
 export const INITIAL_CATEGORIES: Category[] = [
-  { id: 'work', name: '업무', icon: '💼' },
-  { id: 'personal', name: '개인', icon: '👤' },
-  { id: 'health', name: '건강', icon: '🥗' },
-  { id: 'home', name: '집안일', icon: '🏠' },
+  { id: 'dev', name: '프로그램개발', icon: '💻' },
+  { id: 'youtube', name: '유튜브', icon: '🔴' },
+  { id: 'video', name: '영상', icon: '🎬' },
 ];
 
 export const INITIAL_PROJECTS: Project[] = [
@@ -17,7 +16,7 @@ export const INITIAL_PROJECTS: Project[] = [
     progress: 45,
     status: ProjectStatus.ON_TRACK,
     deadline: '2025-12-30',
-    categoryId: 'work',
+    categoryId: 'dev',
     members: [],
     createdAt: '2025-01-01',
   },
@@ -28,7 +27,7 @@ export const INITIAL_PROJECTS: Project[] = [
     progress: 20,
     status: ProjectStatus.PLANNING,
     deadline: '2025-05-15',
-    categoryId: 'home',
+    categoryId: 'video',
     members: [],
     createdAt: '2025-02-01',
   }

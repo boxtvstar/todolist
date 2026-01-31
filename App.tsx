@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot, deleteField } from 'firebase/firestore';
-import { View, Task, Category, Project, ProjectStatus, Memo, Reminder, VideoNote } from './types';
 import { INITIAL_CATEGORIES, INITIAL_PROJECTS } from './constants';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -10,6 +9,10 @@ import HistoryView from './components/HistoryView';
 import LoginView from './components/LoginView';
 import { useAuth } from './services/authContext';
 import { db } from './services/firebase';
+import MemoView from './components/MemoView';
+import ReminderView from './components/ReminderView';
+import VideoNoteView from './components/VideoNoteView';
+import FavoritesView from './components/FavoritesView';
 import {
   addTaskToDb,
   updateTaskInDb,
@@ -18,6 +21,7 @@ import {
   updateProjectInDb,
   deleteProjectFromDb,
   addCategoryToDb,
+  updateCategoryInDb,
   addMemoToDb,
   updateMemoInDb,
   deleteMemoFromDb,
@@ -27,11 +31,12 @@ import {
   deleteReminderFromDb,
   addVideoNoteToDb,
   updateVideoNoteInDb,
-  deleteVideoNoteFromDb
+  deleteVideoNoteFromDb,
+  addFavoriteSiteToDb,
+  updateFavoriteSiteInDb,
+  deleteFavoriteSiteFromDb
 } from './services/db';
-import MemoView from './components/MemoView';
-import ReminderView from './components/ReminderView';
-import VideoNoteView from './components/VideoNoteView';
+import { View, Task, Category, Project, ProjectStatus, Memo, Reminder, VideoNote, FavoriteSite } from './types';
 
 const App: React.FC = () => {
   const { user, loading, logout } = useAuth();
@@ -46,6 +51,7 @@ const App: React.FC = () => {
   const [memos, setMemos] = useState<Memo[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [videoNotes, setVideoNotes] = useState<VideoNote[]>([]);
+  const [favoriteSites, setFavoriteSites] = useState<FavoriteSite[]>([]);
 
   // Orphan Category Cleanup
   const hasRunCleanup = React.useRef(false);
@@ -134,6 +140,13 @@ const App: React.FC = () => {
       setVideoNotes(videoNoteData);
     });
 
+    // Favorite Sites Listener
+    const qFavoriteSites = query(collection(db, "favoriteSites"), where("userId", "==", user.uid));
+    const unsubscribeFavoriteSites = onSnapshot(qFavoriteSites, (snapshot) => {
+      const favoriteSitesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FavoriteSite));
+      setFavoriteSites(favoriteSitesData);
+    });
+
     return () => {
       unsubscribeTasks();
       unsubscribeProjects();
@@ -141,6 +154,7 @@ const App: React.FC = () => {
       unsubscribeMemos();
       unsubscribeReminders();
       unsubscribeVideoNotes();
+      unsubscribeFavoriteSites();
     };
   }, [user]);
 
@@ -418,6 +432,77 @@ const App: React.FC = () => {
     }
   };
 
+  const addFavoriteSite = async (title: string, url: string, description?: string, categoryId?: string): Promise<string> => {
+    if (!user) return "";
+    const id = Date.now().toString();
+    try {
+      const newSite: FavoriteSite = {
+        id,
+        title,
+        url,
+        description,
+        categoryId,
+        createdAt: new Date().toISOString(),
+        userId: user.uid
+      };
+      await addFavoriteSiteToDb(user.uid, newSite);
+      return id;
+    } catch (error: any) {
+      console.error("FavoriteSite add failed:", error);
+      alert(`사이트 추가 실패: ${error.message}`);
+      return "";
+    }
+  };
+
+  const updateFavoriteSite = async (id: string, updates: Partial<FavoriteSite>) => {
+    try {
+      await updateFavoriteSiteInDb(id, updates);
+    } catch (error: any) {
+      console.error("FavoriteSite update failed:", error);
+    }
+  };
+
+  const deleteFavoriteSite = async (id: string) => {
+    try {
+      await deleteFavoriteSiteFromDb(id);
+    } catch (error: any) {
+      console.error("FavoriteSite delete failed:", error);
+      alert(`사이트 삭제 실패: ${error.message}`);
+    }
+  };
+
+  const handleUpdateCategory = async (id: string, updates: Partial<Category>) => {
+    // Prevent updating initial categories
+    if (INITIAL_CATEGORIES.some(c => c.id === id)) {
+      alert("기본 카테고리의 정보는 수정할 수 없습니다.");
+      return;
+    }
+
+    try {
+      await updateCategoryInDb(id, updates);
+      setCategories(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
+    } catch (error: any) {
+      console.error("Category update failed:", error);
+      alert(`카테고리 수정 실패: ${error.message}`);
+    }
+  };
+
+  const handleDeleteCategory = async (id: string) => {
+    // Prevent deleting initial categories
+    if (INITIAL_CATEGORIES.some(c => c.id === id)) {
+      alert("기본 카테고리는 삭제할 수 없습니다.");
+      return;
+    }
+    
+    try {
+      await deleteCategoryFromDb(id);
+      setCategories(prev => prev.filter(c => c.id !== id));
+    } catch (error: any) {
+      console.error("Category delete failed:", error);
+      alert(`카테고리 삭제 실패: ${error.message}`);
+    }
+  };
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleMobileNav = (view: View) => {
@@ -546,6 +631,18 @@ const App: React.FC = () => {
                 addVideoNote={addVideoNote}
                 updateVideoNote={updateVideoNote}
                 deleteVideoNote={deleteVideoNote}
+              />
+            )}
+            {activeView === View.FAVORITES && (
+              <FavoritesView
+                favorites={favoriteSites}
+                categories={categories}
+                addFavorite={addFavoriteSite}
+                updateFavorite={updateFavoriteSite}
+                deleteFavorite={deleteFavoriteSite}
+                onAddCategory={handleAddCategory}
+                updateCategory={handleUpdateCategory}
+                deleteCategory={handleDeleteCategory}
               />
             )}
           </div>

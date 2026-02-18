@@ -1,5 +1,64 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { VideoNote } from '../types';
+
+const extractYouTubeVideoId = (url: string): string | null => {
+  try {
+    const normalizedUrl = url.startsWith('http') ? url : `https://${url}`;
+    const parsed = new URL(normalizedUrl);
+    const hostname = parsed.hostname.replace('www.', '');
+
+    if (hostname === 'youtu.be') {
+      return parsed.pathname.slice(1).split('?')[0] || null;
+    }
+
+    if (hostname.endsWith('youtube.com')) {
+      const searchId = parsed.searchParams.get('v');
+      if (searchId) return searchId;
+
+      const pathSegments = parsed.pathname.split('/').filter(Boolean);
+      if (pathSegments[0] === 'shorts' || pathSegments[0] === 'embed') {
+        return pathSegments[1]?.split('?')[0] || null;
+      }
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+};
+
+const getYouTubeThumbnailUrl = (url: string) => {
+  const videoId = extractYouTubeVideoId(url);
+  return videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null;
+};
+
+const fetchOEmbedThumbnail = async (url: string) => {
+  try {
+    const encodedUrl = encodeURIComponent(url);
+    const res = await fetch(`https://www.youtube.com/oembed?url=${encodedUrl}&format=json`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.thumbnail_url || null;
+  } catch (error) {
+    console.error('oEmbed thumbnail fetch failed:', error);
+    return null;
+  }
+};
+
+const isYouTubeChannelUrl = (url: string) => {
+  try {
+    const normalizedUrl = url.startsWith('http') ? url : `https://${url}`;
+    const parsed = new URL(normalizedUrl);
+    const hostname = parsed.hostname.replace('www.', '');
+
+    if (!hostname.endsWith('youtube.com')) return false;
+    const pathSegments = parsed.pathname.toLowerCase().split('/').filter(Boolean);
+    if (pathSegments.length === 0) return false;
+    return ['channel', 'c', 'user'].includes(pathSegments[0]) || pathSegments[0].startsWith('@');
+  } catch {
+    return false;
+  }
+};
 
 interface VideoNoteViewProps {
   videoNotes: VideoNote[];
@@ -18,6 +77,25 @@ const VideoNoteView: React.FC<VideoNoteViewProps> = ({
   const [urlInput, setUrlInput] = useState('');
   const [isMobileDetailView, setIsMobileDetailView] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [thumbnailCache, setThumbnailCache] = useState<Record<string, string | null>>({});
+  const pendingThumbnailFetches = useRef(new Set<string>());
+  const fetchedThumbnailUrls = useRef(new Set<string>());
+  const queueThumbnailFetch = useCallback((url: string) => {
+    if (!url) return;
+    if (fetchedThumbnailUrls.current.has(url) || pendingThumbnailFetches.current.has(url)) return;
+    pendingThumbnailFetches.current.add(url);
+    fetchOEmbedThumbnail(url)
+      .then((thumbnail) => {
+        setThumbnailCache(prev => {
+          if (prev[url] !== undefined) return prev;
+          return { ...prev, [url]: thumbnail };
+        });
+      })
+      .finally(() => {
+        pendingThumbnailFetches.current.delete(url);
+        fetchedThumbnailUrls.current.add(url);
+      });
+  }, []);
   
   // 로컬 상태로 입력 관리
   const [localScript, setLocalScript] = useState('');
@@ -34,6 +112,17 @@ const VideoNoteView: React.FC<VideoNoteViewProps> = ({
         new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
       );
   }, [videoNotes]);
+
+  const getThumbnailForUrl = useCallback((url: string) => {
+    if (!url) return null;
+    return thumbnailCache[url] ?? getYouTubeThumbnailUrl(url);
+  }, [thumbnailCache]);
+
+  useEffect(() => {
+    videoNotes.forEach(note => {
+      note.videoUrls.forEach(queueThumbnailFetch);
+    });
+  }, [videoNotes, queueThumbnailFetch]);
 
   const selectedNote = selectedNoteId 
     ? videoNotes.find(n => n.id === selectedNoteId) 
@@ -217,41 +306,62 @@ const VideoNoteView: React.FC<VideoNoteViewProps> = ({
                 <p className="text-gray-600 text-sm">잠시만 기다려주세요</p>
               </div>
             ) : (
-              sortedNotes.map(note => (
-                <button
-                  key={note.id}
-                  onClick={() => {
-                    setSelectedNoteId(note.id);
-                    setIsMobileDetailView(true);
-                  }}
-                  className={`
-                    w-full text-left p-4 rounded-xl border transition-all
-                    ${selectedNoteId === note.id 
-                      ? 'bg-[#4ade80]/10 border-[#4ade80]/50 shadow-lg' 
-                      : 'bg-white/5 border-white/10 hover:bg-white/10'
-                    }
-                  `}
-                >
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <h3 className={`font-bold text-xs flex-1 line-clamp-2 ${note.completed ? 'line-through text-gray-500' : 'text-white'}`}>
-                      {getTitle(note.script)}
-                    </h3>
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      {note.videoUrls.length > 0 && (
-                        <span className="text-xs bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-full">
-                          🎥 {note.videoUrls.length}
-                        </span>
-                      )}
-                      {note.completed && (
-                        <span className="text-green-400 text-xs">✓</span>
-                      )}
+              sortedNotes.map(note => {
+                const firstUrl = note.videoUrls[0] || '';
+                const thumbnailUrl = getThumbnailForUrl(firstUrl);
+                const isChannel = isYouTubeChannelUrl(firstUrl);
+                return (
+                  <button
+                    key={note.id}
+                    onClick={() => {
+                      setSelectedNoteId(note.id);
+                      setIsMobileDetailView(true);
+                    }}
+                    className={`
+                      w-full text-left p-4 rounded-xl border transition-all
+                      ${selectedNoteId === note.id 
+                        ? 'bg-[#4ade80]/10 border-[#4ade80]/50 shadow-lg' 
+                        : 'bg-white/5 border-white/10 hover:bg-white/10'
+                      }
+                    `}
+                  >
+                    <div className="flex items-start gap-3 mb-2">
+                      <div className="flex-shrink-0 w-12 h-10 rounded-lg bg-[#0f1712] border border-white/10 overflow-hidden">
+                        {thumbnailUrl ? (
+                          <img
+                            src={thumbnailUrl}
+                            alt="노트 썸네일"
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">
+                            {isChannel ? '채널' : '🎬'}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className={`font-bold text-xs line-clamp-2 ${note.completed ? 'line-through text-gray-500' : 'text-white'}`}>
+                          {getTitle(note.script)}
+                        </h3>
+                        <div className="flex items-center gap-2 mt-1 flex-wrap text-[10px]">
+                          {note.videoUrls.length > 0 && (
+                            <span className="bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-full">
+                              {note.videoUrls.length}
+                            </span>
+                          )}
+                          {note.completed && (
+                            <span className="text-green-400">✓ 완료</span>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <p className="text-[10px] text-gray-500">
-                    {formatDate(note.updatedAt)}
-                  </p>
-                </button>
-              ))
+                    <p className="text-[10px] text-gray-500">
+                      {formatDate(note.updatedAt)}
+                    </p>
+                  </button>
+                );
+              })
             )}
           </div>
         </div>
@@ -312,24 +422,47 @@ const VideoNoteView: React.FC<VideoNoteViewProps> = ({
                     📹 참고 영상 주소
                   </label>
                   <div className="space-y-3">
-                    {selectedNote.videoUrls.map((url, index) => (
-                      <div key={index} className="flex items-center gap-2 bg-white/5 rounded-lg p-3 border border-white/10">
-                        <a 
-                          href={url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="flex-1 text-xs text-[#4ade80] hover:underline truncate"
+                    {selectedNote.videoUrls.map((url, index) => {
+                      const thumbnailUrl = getThumbnailForUrl(url);
+                      const isChannel = isYouTubeChannelUrl(url);
+                      return (
+                        <div
+                          key={index}
+                          className="flex items-center gap-3 bg-white/5 rounded-lg p-3 border border-white/10"
                         >
-                          {url}
-                        </a>
-                        <button
-                          onClick={() => handleRemoveUrl(index)}
-                          className="text-red-400 hover:text-red-300 text-sm px-2"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ))}
+                          <div className="flex-shrink-0 w-16 h-11 rounded-lg bg-[#0f1712] border border-white/10 overflow-hidden">
+                            {thumbnailUrl ? (
+                              <img
+                                src={thumbnailUrl}
+                                alt="영상 썸네일"
+                                className="w-full h-full object-cover"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-sm text-gray-400">
+                                {isChannel ? '채널' : '🎬'}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 flex items-center gap-2">
+                            <a
+                              href={url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex-1 text-xs text-[#4ade80] hover:underline truncate"
+                            >
+                              {url}
+                            </a>
+                            <button
+                              onClick={() => handleRemoveUrl(index)}
+                              className="text-red-400 hover:text-red-300 text-sm px-2"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
                     <div className="flex gap-2">
                       <input
                         type="url"
